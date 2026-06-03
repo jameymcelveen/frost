@@ -47,6 +47,22 @@ function cloneGameState(state: GameState): GameState {
       ...e,
       position: { ...e.position },
     })),
+    traps: state.traps.map((t) => ({
+      ...t,
+      position: { ...t.position },
+      config: { ...t.config },
+    })),
+    switches: state.switches.map((s) => ({
+      ...s,
+      position: { ...s.position },
+    })),
+    markers: state.markers.map((m) => ({
+      ...m,
+      position: { ...m.position },
+    })),
+    telegraphs: [...state.telegraphs],
+    collapsedTrapIds: [...state.collapsedTrapIds],
+    armedGivewayIds: [...state.armedGivewayIds],
     player: { ...state.player },
   };
 }

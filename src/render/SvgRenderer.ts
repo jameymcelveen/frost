@@ -1,7 +1,11 @@
 import type { GameState } from '../core/types.ts';
 import { EntityType } from '../core/types.ts';
+import { TelegraphKind } from '../core/traps/types.ts';
 import type { Renderer } from './Renderer.ts';
-import { entitySvg, playerSvg, tileSize, tileSvg } from './sprites.ts';
+import { drawEntity, drawPlayer, drawTile } from './manifest.ts';
+import { drawSprite } from './manifest.ts';
+import { dartBeamSvg, dartEmitterOverlays, switchOverlay } from './trapOverlay.ts';
+import { tileSize } from './sprites.ts';
 
 export interface Camera {
   readonly x: number;
@@ -40,10 +44,17 @@ export class SvgRenderer implements Renderer {
     const { x, y, zoom } = this.camera;
     const viewW = worldW / zoom;
     const viewH = worldH / zoom;
+    const pulse = state.turn % 2 === 0;
 
     this.root.setAttribute('viewBox', `${x} ${y} ${viewW} ${viewH}`);
     this.root.setAttribute('width', String(worldW));
     this.root.setAttribute('height', String(worldH));
+
+    const trembleIds = new Set(
+      state.telegraphs
+        .filter((t) => t.kind === TelegraphKind.Tremble)
+        .map((t) => t.trapId),
+    );
 
     const parts: string[] = [];
 
@@ -57,8 +68,30 @@ export class SvgRenderer implements Renderer {
         if (tile === undefined) {
           continue;
         }
-        parts.push(tileSvg(col, row, tile));
+        const trap = state.traps.find(
+          (t) =>
+            t.position.x === col &&
+            t.position.y === row &&
+            trembleIds.has(t.id),
+        );
+        parts.push(
+          drawTile(col, row, tile, {
+            tremble: trap !== undefined,
+          }),
+        );
       }
+    }
+
+    parts.push(dartBeamSvg(state, pulse));
+    parts.push(dartEmitterOverlays(state));
+    parts.push(switchOverlay(state));
+
+    for (const marker of state.markers) {
+      parts.push(
+        drawSprite(marker.spriteId, marker.position.x, marker.position.y, {
+          eyeOpen: marker.eyeOpen,
+        }),
+      );
     }
 
     for (const ent of state.entities) {
@@ -66,12 +99,10 @@ export class SvgRenderer implements Renderer {
         ent.type === EntityType.TikiShooter && 'facing' in ent.config
           ? ent.config.facing
           : undefined;
-      parts.push(
-        entitySvg(ent.position.x, ent.position.y, ent.type, facing),
-      );
+      parts.push(drawEntity(ent.type, ent.position.x, ent.position.y, { facing }));
     }
 
-    parts.push(playerSvg(state.player.x, state.player.y));
+    parts.push(drawPlayer(state.player.x, state.player.y));
     this.layer.innerHTML = parts.join('');
   }
 

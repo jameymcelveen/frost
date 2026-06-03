@@ -1,0 +1,71 @@
+{
+  "version": 2,
+  "width": 11,
+  "height": 9,
+  "metadata": {
+    "name": "Dart Gallery",
+    "author": "Frost",
+    "parMoves": 32
+  },
+  "playerStart": { "x": 1, "y": 7 },
+  "tiles": [
+    "wall", "wall", "wall", "wall", "wall", "wall", "wall", "wall", "wall", "wall", "wall",
+    "wall", "floor", "floor", "floor", "wall", "wall", "floor", "exit", "floor", "floor", "wall",
+    "wall", "floor", "floor", "floor", "wall", "wall", "floor", "floor", "floor", "floor", "wall",
+    "wall", "floor", "floor", "floor", "wall", "wall", "floor", "floor", "floor", "wall", "wall",
+    "wall", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall", "wall",
+    "wall", "floor", "floor", "floor", "wall", "wall", "floor", "floor", "floor", "floor", "wall",
+    "wall", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",
+    "wall", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "floor", "wall",
+    "wall", "wall", "wall", "wall", "wall", "wall", "wall", "wall", "wall", "wall", "wall"
+  ],
+  "entities": [
+    {
+      "id": "block-1",
+      "type": "block",
+      "position": { "x": 7, "y": 3 },
+      "config": {}
+    }
+  ],
+  "traps": [
+    {
+      "id": "dart-1",
+      "type": "dart",
+      "position": { "x": 9, "y": 3 },
+      "config": { "dir": "west", "switchId": "sw-1", "telegraph": "beam" }
+    },
+    {
+      "id": "gw-tremble",
+      "type": "giveway",
+      "position": { "x": 3, "y": 5 },
+      "config": {
+        "collapseMode": "afterLeave",
+        "telegraph": "tremble"
+      }
+    },
+    {
+      "id": "gw-instant",
+      "type": "giveway",
+      "position": { "x": 3, "y": 1 },
+      "config": {
+        "collapseMode": "instant",
+        "telegraph": "statue",
+        "linkedTileId": "statue-1"
+      }
+    }
+  ],
+  "switches": [
+    {
+      "id": "sw-1",
+      "position": { "x": 8, "y": 6 },
+      "initiallyEngaged": false
+    }
+  ],
+  "markers": [
+    {
+      "id": "statue-1",
+      "position": { "x": 2, "y": 1 },
+      "spriteId": "statue"
+    }
+  ]
+}

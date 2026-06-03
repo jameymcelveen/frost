@@ -16,6 +16,8 @@ describe('level', () => {
     expect(initialState.height).toBe(9);
     expect(initialState.player).toEqual({ x: 1, y: 7 });
     expect(initialState.collectiblesRemaining).toBe(1);
+    expect(initialState.traps).toHaveLength(0);
+    expect(initialState.switches).toHaveLength(0);
     expect(initialState.tiles[2]?.[7]).toBe(TileType.Exit);
     expect(initialState.entities).toHaveLength(2);
     expect(initialState.entities[0]?.type).toBe(EntityType.Block);

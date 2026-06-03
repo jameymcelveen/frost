@@ -1,13 +1,20 @@
-import { inBounds, offset, tileAt, vecEq } from './grid.ts';
+import { offset, tileAt, vecEq } from './grid.ts';
+import { resolvePlayerMove, toggleSwitchAtPlayer, applyHit } from './movement.ts';
 import {
-  EntityType,
+  evaluateTrapEnter,
+  runTrapAfterMove,
+} from './traps/registry.ts';
+import { applyMarkerTelegraphs } from './traps/telegraph.ts';
+import { CollapseMode, TrapType, type GivewayTrapConfig } from './traps/types.ts';
+import { collapseGivewayTrap } from './traps/giveway.ts';
+import {
   GameStatus,
   TileType,
   type Direction,
   type Entity,
   type GameState,
-  type Vec2,
 } from './types.ts';
+import { EntityType } from './types.ts';
 
 function cloneState(state: GameState): GameState {
   return {
@@ -18,50 +25,18 @@ function cloneState(state: GameState): GameState {
       position: { ...e.position },
       config: { ...e.config },
     })),
+    traps: state.traps.map((t) => ({
+      ...t,
+      position: { ...t.position },
+      config: { ...t.config },
+    })),
+    switches: state.switches.map((s) => ({ ...s, position: { ...s.position } })),
+    markers: state.markers.map((m) => ({ ...m, position: { ...m.position } })),
+    telegraphs: [...state.telegraphs],
+    collapsedTrapIds: [...state.collapsedTrapIds],
+    armedGivewayIds: [...state.armedGivewayIds],
     player: { ...state.player },
   };
-}
-
-function entityAt(entities: readonly Entity[], pos: Vec2): Entity | undefined {
-  return entities.find((e) => vecEq(e.position, pos));
-}
-
-function isBlockingTile(tile: TileType | undefined): boolean {
-  if (tile === undefined) {
-    return true;
-  }
-  return tile === TileType.Wall;
-}
-
-function isBlockingCell(state: GameState, pos: Vec2): boolean {
-  if (!inBounds(pos, state.width, state.height)) {
-    return true;
-  }
-
-  const tile = tileAt(state.tiles, pos);
-  if (isBlockingTile(tile)) {
-    return true;
-  }
-
-  const ent = entityAt(state.entities, pos);
-  if (ent === undefined) {
-    return false;
-  }
-
-  // M1: blocks and enemies occupy their cell (push/combat in later milestones).
-  return true;
-}
-
-function resolvePlayerMove(
-  state: GameState,
-  direction: Direction,
-): GameState {
-  const next = offset(state.player, direction);
-  if (isBlockingCell(state, next)) {
-    return state;
-  }
-
-  return { ...state, player: next };
 }
 
 function checkWin(state: GameState): GameState {
@@ -69,14 +44,29 @@ function checkWin(state: GameState): GameState {
   if (tile !== TileType.Exit) {
     return state;
   }
-
-  // M1: exit wins immediately (collectible lock arrives in M2).
   return { ...state, status: GameStatus.Won };
 }
 
+function resolveInstantGivewayFall(state: GameState): GameState {
+  const trap = state.traps.find(
+    (t) =>
+      t.type === TrapType.Giveway &&
+      t.position.x === state.player.x &&
+      t.position.y === state.player.y,
+  );
+  if (trap === undefined) {
+    return state;
+  }
+  const cfg = trap.config as GivewayTrapConfig;
+  if (cfg.collapseMode !== CollapseMode.Instant) {
+    return state;
+  }
+  let next = collapseGivewayTrap(state, trap);
+  return { ...next, status: GameStatus.Lost };
+}
+
 /**
- * Resolves one full turn: player move, then hazards, enemies, win/lose.
- * M1 implements player movement, blocking, and exit win only.
+ * Resolves one full turn: telegraphs → enter checks → move → switches → trap aftermath → win.
  */
 export function resolveTurn(
   state: GameState,
@@ -87,21 +77,54 @@ export function resolveTurn(
   }
 
   let next = cloneState(state);
+  next = applyMarkerTelegraphs(next);
+
+  const target = offset(next.player, direction);
+  const enter = evaluateTrapEnter(next, target, next.player);
+
+  if (enter.kind === 'hit') {
+    const instant = next.traps.find(
+      (t) =>
+        t.type === TrapType.Giveway &&
+        vecEq(t.position, target) &&
+        (t.config as GivewayTrapConfig).collapseMode === CollapseMode.Instant,
+    );
+    if (instant !== undefined) {
+      next = collapseGivewayTrap(next, instant);
+    }
+    return applyHit(applyMarkerTelegraphs(next));
+  }
+
+  const previousPlayer = { ...next.player };
   next = resolvePlayerMove(next, direction);
-  // M2+: resolveHazards(next)
-  // M3+: resolveEnemies(next)
+
+  if (enter.kind === 'block' && next.player.x === previousPlayer.x &&
+      next.player.y === previousPlayer.y) {
+    return applyMarkerTelegraphs(next);
+  }
+
+  next = toggleSwitchAtPlayer(next);
+  next = runTrapAfterMove(next, direction, previousPlayer);
+  next = resolveInstantGivewayFall(next);
   next = { ...next, turn: next.turn + 1 };
+  next = applyMarkerTelegraphs(next);
   next = checkWin(next);
   return next;
 }
 
-/** Whether a direction input would change game state (used by tests). */
 export function canPlayerMove(state: GameState, direction: Direction): boolean {
   if (state.status !== GameStatus.Playing) {
     return false;
   }
-  const next = offset(state.player, direction);
-  return !isBlockingCell(state, next);
+  const target = offset(state.player, direction);
+  const enter = evaluateTrapEnter(state, target, state.player);
+  if (enter.kind === 'hit') {
+    return false;
+  }
+  const probe = resolvePlayerMove(cloneState(state), direction);
+  return (
+    probe.player.x !== state.player.x || probe.player.y !== state.player.y
+  );
 }
 
 export function entityBlocksMovement(entity: Entity): boolean {

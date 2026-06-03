@@ -72,6 +72,12 @@ export interface GameState {
   readonly height: number;
   readonly tiles: readonly (readonly TileType[])[];
   readonly entities: readonly Entity[];
+  readonly traps: readonly import('./traps/types.ts').Trap[];
+  readonly switches: readonly import('./traps/types.ts').SwitchState[];
+  readonly markers: readonly import('./traps/types.ts').MarkerState[];
+  readonly telegraphs: readonly import('./traps/types.ts').ActiveTelegraph[];
+  readonly collapsedTrapIds: readonly string[];
+  readonly armedGivewayIds: readonly string[];
   readonly player: Vec2;
   readonly status: GameStatus;
   /** Collectibles remaining on the grid (tile + not yet picked up). */

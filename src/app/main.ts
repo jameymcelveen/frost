@@ -3,7 +3,7 @@ import { parseLevel } from '../core/level.ts';
 import { GameStatus } from '../core/types.ts';
 import { KeyboardInput } from '../input/KeyboardInput.ts';
 import { SvgRenderer } from '../render/SvgRenderer.ts';
-import level01 from '../levels/level-01.json';
+import level02 from '../levels/level-02-traps.json';
 
 function setHud(text: string): void {
   const hud = document.getElementById('hud');
@@ -27,7 +27,11 @@ function bootstrap(): void {
     throw new Error('#game-root not found');
   }
 
-  const { initialState, metadata } = parseLevel(level01);
+  const { initialState, metadata, fairnessWarnings } = parseLevel(level02);
+  for (const w of fairnessWarnings) {
+    console.warn(`[frost] trap fairness: ${w}`);
+  }
+
   const game = new Game(initialState);
   const renderer = new SvgRenderer();
   const input = new KeyboardInput();
@@ -38,7 +42,7 @@ function bootstrap(): void {
     const state = game.getState();
     renderer.render(state);
     setHud(
-      `${metadata.name} · turn ${state.turn} · arrow keys / WASD`,
+      `${metadata.name} · turn ${state.turn} · arrows/WASD · R reset`,
     );
 
     if (state.status === GameStatus.Won) {
@@ -47,7 +51,7 @@ function bootstrap(): void {
     }
 
     if (state.status === GameStatus.Lost) {
-      setOverlay('Fallen', true);
+      setOverlay('Fallen — press R', true);
       return;
     }
 
@@ -57,6 +61,13 @@ function bootstrap(): void {
   input.attach((direction) => {
     game.step(direction);
     refresh();
+  });
+
+  window.addEventListener('keydown', (ev) => {
+    if (ev.key === 'r' || ev.key === 'R') {
+      game.reset();
+      refresh();
+    }
   });
 
   refresh();

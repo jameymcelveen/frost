@@ -13,12 +13,18 @@ describe('rules', () => {
     expect(next.player).toEqual(initialState.player);
   });
 
-  it('blocks movement into pushable block (M1: static obstacle)', () => {
+  it('can push a block when the tile beyond is free', () => {
     const onBlock = {
       ...initialState,
       player: { x: 4, y: 6 },
     };
-    expect(canPlayerMove(onBlock, 'east')).toBe(false);
+    expect(canPlayerMove(onBlock, 'east')).toBe(true);
+    const next = resolveTurn(onBlock, 'east');
+    expect(next.player).toEqual({ x: 5, y: 6 });
+    expect(next.entities.find((e) => e.id === 'block-1')?.position).toEqual({
+      x: 6,
+      y: 6,
+    });
   });
 
   it('allows movement on open floor', () => {
