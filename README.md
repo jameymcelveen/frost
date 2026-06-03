@@ -32,13 +32,25 @@ pnpm test      # unit tests (core)
 pnpm build     # production bundle
 ```
 
+## Mobile (Capacitor)
+
+Native iOS/Android shells live in `mobile/` — same web build, no logic fork.
+
+```bash
+pnpm build
+cd mobile && npm install && npm run sync
+npx cap run ios      # or android
+```
+
+Touch: swipe on the board, optional **PAD** D-pad, tap to reset. See [mobile/README.md](mobile/README.md) and [docs/MOBILE.md](docs/MOBILE.md).
+
 ## Architecture
 
 ```
 src/
   core/       # Pure game logic — no DOM, fully tested
   render/     # Renderer adapter (SVG today; React later)
-  input/      # Input adapter (keyboard; touch stub)
+  input/      # Input adapters (keyboard, swipe, D-pad via GameInput)
   app/        # Bootstrap wiring
   editor/     # Level builder (M6)
   levels/     # Versioned JSON levels

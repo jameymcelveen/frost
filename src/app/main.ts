@@ -1,12 +1,14 @@
 import { Game } from '../core/game.ts';
 import { parseLevel } from '../core/level.ts';
 import { GameStatus } from '../core/types.ts';
-import { KeyboardInput } from '../input/KeyboardInput.ts';
+import { GameInput } from '../input/GameInput.ts';
 import { SvgRenderer } from '../render/SvgRenderer.ts';
+import { hapticImpact } from './haptics.ts';
+import { initNativeShell } from './native.ts';
 import level02 from '../levels/level-02-traps.json';
 
 function setHud(text: string): void {
-  const hud = document.getElementById('hud');
+  const hud = document.getElementById('hud-text');
   if (hud !== null) {
     hud.textContent = text;
   }
@@ -19,12 +21,16 @@ function setOverlay(text: string, visible: boolean): void {
   }
   overlay.textContent = text;
   overlay.classList.toggle('visible', visible);
+  overlay.classList.toggle('overlay--actionable', visible);
 }
 
 function bootstrap(): void {
+  void initNativeShell();
+
   const container = document.getElementById('game-root');
-  if (container === null) {
-    throw new Error('#game-root not found');
+  const dpad = document.getElementById('dpad');
+  if (container === null || dpad === null) {
+    throw new Error('#game-root or #dpad not found');
   }
 
   const { initialState, metadata, fairnessWarnings } = parseLevel(level02);
@@ -34,40 +40,77 @@ function bootstrap(): void {
 
   const game = new Game(initialState);
   const renderer = new SvgRenderer();
-  const input = new KeyboardInput();
+  const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+  const input = new GameInput({
+    swipeTarget: container,
+    dpadRoot: dpad,
+    enableDpad: coarsePointer,
+  });
 
   renderer.mount(container);
+
+  const resetGame = (): void => {
+    game.reset();
+    refresh();
+  };
 
   const refresh = (): void => {
     const state = game.getState();
     renderer.render(state);
+    const touchHint = coarsePointer ? 'swipe / D-pad' : 'arrows / WASD';
     setHud(
-      `${metadata.name} · turn ${state.turn} · arrows/WASD · R reset`,
+      `${metadata.name} · turn ${state.turn} · ${touchHint} · tap/● reset`,
     );
 
     if (state.status === GameStatus.Won) {
-      setOverlay('Temple cleared', true);
+      setOverlay('Temple cleared — tap to play again', true);
       return;
     }
 
     if (state.status === GameStatus.Lost) {
-      setOverlay('Fallen — press R', true);
+      setOverlay('Fallen — tap to retry', true);
       return;
     }
 
     setOverlay('', false);
   };
 
-  input.attach((direction) => {
+  const onMove = (direction: import('../core/types.ts').Direction): void => {
+    const before = game.getState();
     game.step(direction);
+    const after = game.getState();
+
+    if (
+      before.status === GameStatus.Playing &&
+      after.status === GameStatus.Lost
+    ) {
+      void hapticImpact('heavy');
+    } else if (
+      before.status === GameStatus.Playing &&
+      after.status === GameStatus.Playing &&
+      before.player.x === after.player.x &&
+      before.player.y === after.player.y
+    ) {
+      void hapticImpact('light');
+    }
+
     refresh();
+  };
+
+  input.attach(onMove, resetGame);
+
+  const overlay = document.getElementById('overlay');
+  overlay?.addEventListener('click', () => {
+    if (game.getState().status !== GameStatus.Playing) {
+      resetGame();
+    }
   });
 
-  window.addEventListener('keydown', (ev) => {
-    if (ev.key === 'r' || ev.key === 'R') {
-      game.reset();
-      refresh();
-    }
+  const dpadToggle = document.getElementById('dpad-toggle');
+  dpadToggle?.addEventListener('click', () => {
+    const hidden = dpad.classList.contains('hidden');
+    input.setDpadVisible(hidden);
+    dpadToggle.setAttribute('aria-pressed', hidden ? 'true' : 'false');
   });
 
   refresh();
