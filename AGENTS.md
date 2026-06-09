@@ -24,7 +24,7 @@ Use pnpm. The `Makefile` just wraps these.
 - Dev server: `pnpm dev` (http://localhost:5173)
 - Build: `pnpm build`
 
-Always run `pnpm test` and make it green before finishing a task. The suite is currently passing (around 25 tests). Do not reduce that count or skip tests to get green.
+Always run `pnpm test` and make it green before finishing a task. The suite is currently passing (55 tests). Do not reduce that count or skip tests to get green.
 
 ## Architecture and boundaries (read this twice)
 
@@ -34,6 +34,7 @@ Strict separation of concerns. Most mistakes in this repo come from crossing the
 src/
   core/    Pure game logic. NO DOM, NO browser/Capacitor APIs. Fully unit-tested.
   render/  Renderer adapter behind the Renderer interface (SVG today, React later).
+    sprites/  Composable sprite parts system (SpriteSpec, PartRegistry, composer).
   input/   Input adapters behind GameInput (keyboard, touch/swipe, D-pad).
   app/     Bootstrap that wires core + render + input together.
   editor/  Level builder (M6, not yet built).
