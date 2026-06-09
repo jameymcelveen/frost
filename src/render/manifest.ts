@@ -1,4 +1,8 @@
 import { EntityType, TileType, type Direction } from '../core/types.ts';
+import {
+  getTikiEnemySpriteContent,
+  spriteViewBox,
+} from './sprites/index.ts';
 import { tileSize } from './sprites.ts';
 
 export type SpriteDrawFn = (x: number, y: number, opts?: SpriteOpts) => string;
@@ -53,12 +57,12 @@ const entitySprites: Record<string, SpriteDrawFn> = {
   [EntityType.TikiShooter]: (x, y, opts) =>
     entitySprites.dartEmitter(x, y, opts),
   [EntityType.TikiWalker]: (x, y) => {
-    const px = x * TILE_SIZE + 6;
-    const py = y * TILE_SIZE + 6;
-    const w = TILE_SIZE - 12;
-    const h = TILE_SIZE - 12;
-    return `<ellipse cx="${px + w / 2}" cy="${py + h / 2}" rx="${w / 2 - 2}" ry="${h / 2 - 2}" fill="#5a3048" stroke="#d8a0c0" stroke-width="2"/>
-      ${labelAt(px + w / 2, py + h / 2 + 4, 'WLK', 8)}`;
+    const box = spriteViewBox();
+    const size = TILE_SIZE - 6;
+    const px = x * TILE_SIZE + 3;
+    const py = y * TILE_SIZE + 1;
+    const content = getTikiEnemySpriteContent();
+    return `<svg x="${px}" y="${py}" width="${size}" height="${size}" viewBox="${box.minX} ${box.minY} ${box.width} ${box.height}" overflow="visible">${content}</svg>`;
   },
   statue: (x, y, opts) => {
     const cx = x * TILE_SIZE + TILE_SIZE / 2;
